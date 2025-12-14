@@ -116,9 +116,9 @@ export default function CreateDesign() {
             onChange={(e) => setStyle(e.target.value)}
           >
             {STYLE_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
+              <s-option key={o.value} value={o.value}>
                 {o.label}
-              </option>
+              </s-option>
             ))}
           </s-select>
 
