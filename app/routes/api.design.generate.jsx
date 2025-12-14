@@ -5,7 +5,6 @@
  * stores the generated design metadata in DB, and returns the image URL.
  */
 
-import { json } from "react-router";
 import { authenticate } from "../shopify.server.js";
 import { generateDesign } from "../backend/ai/ai.service.js";
 import { createDesign } from "../backend/design/design.service.js";
@@ -13,7 +12,7 @@ import { requireWithinQuota } from "../backend/billing/billing.service.js";
 
 export const action = async ({ request }) => {
   if (request.method !== "POST") {
-    return json({ error: "Method not allowed" }, { status: 405 });
+    return Response.json({ error: "Method not allowed" }, { status: 405 });
   }
 
   const { session } = await authenticate.admin(request);
@@ -22,7 +21,7 @@ export const action = async ({ request }) => {
   try {
     body = await request.json();
   } catch {
-    return json({ error: "Invalid JSON body" }, { status: 400 });
+    return Response.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
   const prompt = body?.prompt;
@@ -30,11 +29,11 @@ export const action = async ({ request }) => {
   const colors = body?.colors;
 
   if (!prompt || typeof prompt !== "string" || prompt.trim().length < 3) {
-    return json({ error: "Prompt is required." }, { status: 400 });
+    return Response.json({ error: "Prompt is required." }, { status: 400 });
   }
 
   if (colors && !Array.isArray(colors)) {
-    return json({ error: "Colors must be an array." }, { status: 400 });
+    return Response.json({ error: "Colors must be an array." }, { status: 400 });
   }
 
   try {
@@ -54,7 +53,7 @@ export const action = async ({ request }) => {
       provider: generated.provider,
     });
 
-    return json({
+    return Response.json({
       design: {
         id: design.id,
         imageUrl: design.imageUrl,
@@ -67,9 +66,12 @@ export const action = async ({ request }) => {
   } catch (err) {
     const message = err?.message || "Unknown error";
     if (err?.code === "QUOTA_EXCEEDED") {
-      return json({ error: message, code: err.code, meta: err.meta }, { status: 402 });
+      return Response.json(
+        { error: message, code: err.code, meta: err.meta },
+        { status: 402 },
+      );
     }
-    return json({ error: message }, { status: 500 });
+    return Response.json({ error: message }, { status: 500 });
   }
 };
 
