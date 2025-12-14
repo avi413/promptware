@@ -32,3 +32,48 @@ model Session {
   refreshToken        String?
   refreshTokenExpires DateTime?
 }
+
+/// A generated AI design associated with a shop.
+/// This is the core entity for the B2B AI Design Generator milestone.
+model Design {
+  id        String   @id @default(cuid())
+  shop      String
+  prompt    String
+  style     String?
+  colorsJson String?
+  imageUrl  String
+  provider  String?
+  createdAt DateTime @default(now())
+
+  productLinks ProductDesign[]
+
+  @@index([shop, createdAt])
+}
+
+/// Links a generated design to a Shopify product (created or selected).
+model ProductDesign {
+  id        String   @id @default(cuid())
+  shop      String
+  designId  String
+  productId String
+  createdAt DateTime @default(now())
+
+  design Design @relation(fields: [designId], references: [id], onDelete: Cascade)
+
+  @@unique([shop, designId, productId])
+  @@index([shop, productId])
+}
+
+/// Stores the merchant's currently-selected plan and billing state.
+/// Billing API integration is implemented in app backend services.
+model ShopPlan {
+  shop          String   @id
+  plan          String   @default("starter") // starter | pro | unlimited
+  status        String   @default("inactive") // inactive | active | cancelled
+  activatedAt   DateTime?
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  chargeId      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+} 
