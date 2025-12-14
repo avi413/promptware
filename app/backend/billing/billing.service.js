@@ -17,22 +17,42 @@ export const PLANS = {
   unlimited: { name: "Unlimited", quota: Number.POSITIVE_INFINITY },
 };
 
+function getShopPlanDelegate() {
+  // If Prisma Client wasn't regenerated after adding the ShopPlan model,
+  // the delegate won't exist and `prisma.shopPlan` will be undefined.
+  return prisma?.shopPlan;
+}
+
 /**
  * Get (or create) the shop plan record.
  * Defaults to starter/inactive until Billing API flow is implemented.
  * @param {string} shop
  */
 export async function getOrCreateShopPlan(shop) {
-  const existing = await prisma.shopPlan.findUnique({ where: { shop } });
-  if (existing) return existing;
+  const delegate = getShopPlanDelegate();
+  if (!delegate) {
+    // Safe fallback so Billing UI doesn't hard-crash in dev/prod when the
+    // Prisma client is stale or the model isn't available yet.
+    return { shop, plan: "starter", status: "inactive" };
+  }
 
-  return await prisma.shopPlan.create({
-    data: {
-      shop,
-      plan: "starter",
-      status: "inactive",
-    },
-  });
+  try {
+    const existing = await delegate.findUnique({ where: { shop } });
+    if (existing) return existing;
+
+    return await delegate.create({
+      data: {
+        shop,
+        plan: "starter",
+        status: "inactive",
+      },
+    });
+  } catch (err) {
+    // Common cases: migrations not applied yet ("no such table: ShopPlan"),
+    // or stale Prisma client after schema change. In both cases, default to
+    // Starter so the page and app remain usable.
+    return { shop, plan: "starter", status: "inactive", _error: String(err) };
+  }
 }
 
 /**
